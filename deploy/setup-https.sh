@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
-# Serve poli-tracker over HTTPS with a real Let's Encrypt certificate.
+# Serve poli-tracker over HTTPS with a SELF-SIGNED certificate.
 #
-#   nginx (443, TLS)  ->  gunicorn (127.0.0.1:8000)
+#   nginx (443, TLS, self-signed)  ->  gunicorn (127.0.0.1:8000)
 #
-# PREREQUISITES (must be true BEFORE running this):
-#   1. The app is installed at /opt/poli-tracker and the poli-tracker systemd
-#      service runs gunicorn on 127.0.0.1:8000 (use deploy/poli-tracker.service).
-#   2. The DNS name resolves to THIS server's public IP:
-#         poli-tracker.rpg4you.com  A  <this server's public IP>
-#   3. Inbound TCP 80 AND 443 are open (cloud firewall/security group + host).
+# Self-signed means NO Let's Encrypt, so there is no DNS/HTTP-01 dependency — fine
+# for a service that isn't always online and whose DNS is managed by hand.
+# Browsers will show a "not secure / unknown issuer" warning that you accept once.
 #
-# Usage:  sudo ./setup-https.sh [DOMAIN] [EMAIL]
+# PREREQUISITES:
+#   1. The app is installed at /opt/poli-tracker with its virtualenv.
+#   2. Inbound TCP 443 is open (cloud firewall/security group + host); 80 too if
+#      you want the HTTP->HTTPS redirect.
+#   (No DNS record is required for the cert; the name is just baked into it so it
+#    matches when you do point poli-tracker.rpg4you.com at the box by hand.)
+#
+# Usage:  sudo ./setup-https.sh [DOMAIN]
 set -euxo pipefail
 
 DOMAIN="${1:-poli-tracker.rpg4you.com}"
-EMAIL="${2:-admin@rpg4you.com}"
+CRT=/etc/ssl/certs/poli-tracker-selfsigned.crt
+KEY=/etc/ssl/private/poli-tracker-selfsigned.key
 
-# 1. Install nginx + certbot (Ubuntu/Debian).
+# 1. Install nginx (+ openssl, usually already present).
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y nginx certbot python3-certbot-nginx
+apt-get install -y nginx openssl
 
 # 2. Point gunicorn at localhost:8000 (production unit), then (re)start it.
 install -m 0644 /opt/poli-tracker/deploy/poli-tracker.service \
@@ -27,11 +32,26 @@ install -m 0644 /opt/poli-tracker/deploy/poli-tracker.service \
 systemctl daemon-reload
 systemctl enable --now poli-tracker
 
-# 3. nginx reverse proxy (HTTP for now; certbot adds the TLS/redirect in step 4).
+# 3. Generate a self-signed cert (valid ~10 years) with the domain as CN + SAN.
+openssl req -x509 -nodes -newkey rsa:2048 \
+  -keyout "$KEY" -out "$CRT" -days 3650 \
+  -subj "/CN=${DOMAIN}" -addext "subjectAltName=DNS:${DOMAIN}"
+chmod 600 "$KEY"
+
+# 4. nginx: redirect 80 -> 443, serve TLS on 443, proxy to gunicorn.
 cat >/etc/nginx/sites-available/poli-tracker <<NGINX
 server {
     listen 80;
     server_name ${DOMAIN};
+    return 301 https://\$host\$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate     ${CRT};
+    ssl_certificate_key ${KEY};
+
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host \$host;
@@ -46,9 +66,4 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
-# 4. Obtain + install the Let's Encrypt cert, and add the HTTP->HTTPS redirect.
-#    certbot edits the nginx config in place and sets up auto-renewal (systemd timer).
-certbot --nginx -d "${DOMAIN}" --non-interactive --agree-tos -m "${EMAIL}" --redirect
-systemctl reload nginx
-
-echo "Done. Visit: https://${DOMAIN}"
+echo "Done. Visit: https://${DOMAIN}  (accept the self-signed certificate warning)"
