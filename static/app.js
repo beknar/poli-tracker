@@ -27,10 +27,13 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // Graph buttons -> fetch price history -> draw line chart in the modal.
-  document.querySelectorAll(".graph-btn").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      openGraph(btn.dataset.ticker, btn.dataset.start, btn.dataset.member);
-    });
+  // Delegated from document so it also works for rows DataTables renders on
+  // later pages (those rows aren't in the DOM at load time / get re-created on
+  // pagination, so binding each button once at load only covered page 1).
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".graph-btn");
+    if (!btn) return;
+    openGraph(btn.dataset.ticker, btn.dataset.start, btn.dataset.member);
   });
 });
 
