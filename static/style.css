@@ -1,0 +1,14 @@
+/* Small accents on top of Bootstrap for a cleaner dashboard feel. */
+body { font-size: 0.95rem; }
+
+.navbar-brand { font-size: 1.15rem; }
+
+.card .text-uppercase { letter-spacing: 0.04em; font-size: 0.7rem; }
+
+table#trades td, table#trades th { white-space: nowrap; }
+table#trades td.text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.graph-btn { line-height: 1; }
+
+/* Keep the change column emphatic. */
+td.text-success, td.text-danger { font-variant-numeric: tabular-nums; }
