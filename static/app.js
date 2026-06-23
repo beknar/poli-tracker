@@ -1,17 +1,22 @@
-/* Dashboard interactivity: sortable/searchable table + performance-graph modal. */
+/* Interactivity for both pages: sortable/searchable tables, refresh button,
+   and the per-holding performance-graph modal (member detail page). */
 let perfChart = null;
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Sortable, searchable, paginated table — sorted by purchase date desc.
   if (window.jQuery && jQuery.fn.DataTable) {
-    jQuery("#trades").DataTable({
-      order: [[4, "desc"]],
-      pageLength: 25,
-      lengthMenu: [10, 25, 50, 100],
-    });
+    // Member list (dashboard): sort by est. value desc.
+    if (document.getElementById("members")) {
+      jQuery("#members").DataTable({ order: [[3, "desc"]], pageLength: 25,
+        lengthMenu: [10, 25, 50, 100] });
+    }
+    // A member's trades (detail page): sort by purchase date desc.
+    if (document.getElementById("trades")) {
+      jQuery("#trades").DataTable({ order: [[2, "desc"]], pageLength: 25,
+        lengthMenu: [10, 25, 50, 100] });
+    }
   }
 
-  // Disable the refresh button while a refresh is running (it can take a while).
+  // Disable the refresh button while a refresh runs (dashboard only).
   const form = document.getElementById("refresh-form");
   if (form) {
     form.addEventListener("submit", function () {
@@ -24,10 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Graph buttons -> fetch price history -> draw line chart in the modal.
   document.querySelectorAll(".graph-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
-      const ticker = btn.dataset.ticker;
-      const start = btn.dataset.start;
-      const member = btn.dataset.member;
-      openGraph(ticker, start, member);
+      openGraph(btn.dataset.ticker, btn.dataset.start, btn.dataset.member);
     });
   });
 });
@@ -68,19 +70,14 @@ function openGraph(ticker, start, member) {
             data: series.map((p) => p.close),
             borderColor: up ? "#198754" : "#dc3545",
             backgroundColor: up ? "rgba(25,135,84,.1)" : "rgba(220,53,69,.1)",
-            fill: true,
-            pointRadius: 0,
-            borderWidth: 2,
-            tension: 0.1,
+            fill: true, pointRadius: 0, borderWidth: 2, tension: 0.1,
           }],
         },
         options: {
           responsive: true,
           plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { maxTicksLimit: 8 } },
-            y: { ticks: { callback: (v) => "$" + v } },
-          },
+          scales: { x: { ticks: { maxTicksLimit: 8 } },
+                    y: { ticks: { callback: (v) => "$" + v } } },
         },
       });
     })

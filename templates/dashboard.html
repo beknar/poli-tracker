@@ -13,22 +13,19 @@
     <div class="container-fluid">
       <span class="navbar-brand mb-0 h1">🏛️ Congressional Stock Purchases</span>
       <form method="post" action="{{ url_for('refresh') }}" class="d-flex" id="refresh-form">
-        <button class="btn btn-outline-light btn-sm" type="submit" id="refresh-btn">
-          ⟳ Refresh data
-        </button>
+        <button class="btn btn-outline-light btn-sm" type="submit" id="refresh-btn">⟳ Refresh data</button>
       </form>
     </div>
   </nav>
 
   <main class="container-fluid py-4">
     <p class="text-muted small">
-      Purchases disclosed under the STOCK Act over the last 6 months. Values are
-      <em>estimates</em> derived from the disclosed dollar range and per-share prices
-      (disclosures report a $ range, not share counts). Last updated:
-      <strong>{{ summary.last_updated }}</strong>.
+      Members of Congress and their disclosed stock <strong>purchases</strong> over the
+      last 6 months (STOCK Act filings). Click a member to see their individual trades
+      and performance. Values are <em>estimates</em> from the disclosed dollar ranges.
+      Last updated: <strong>{{ summary.last_updated }}</strong>.
     </p>
 
-    <!-- Summary cards -->
     <div class="row g-3 mb-4">
       {% set cards = [
         ("Members", summary.members, "primary"),
@@ -48,7 +45,7 @@
       {% endfor %}
     </div>
 
-    {% if not rows %}
+    {% if not members %}
     <div class="alert alert-warning">
       No data yet. Click <strong>Refresh data</strong> above (or run
       <code>python -m backend.ingest</code>) to populate the database.
@@ -57,41 +54,23 @@
 
     <div class="card shadow-sm">
       <div class="card-body">
-        <table id="trades" class="table table-striped table-hover align-middle w-100">
+        <table id="members" class="table table-striped table-hover align-middle w-100">
           <thead>
             <tr>
-              <th>Member</th><th>Chamber</th><th>Ticker</th><th>Asset</th>
-              <th>Purchase date</th><th>Amount (disclosed)</th>
-              <th class="text-end">Buy $/sh</th><th class="text-end">Now $/sh</th>
-              <th class="text-end">Change</th><th class="text-end">Est. value now</th>
-              <th></th>
+              <th>Member</th>
+              <th>Chamber</th>
+              <th class="text-end">Purchases</th>
+              <th class="text-end">Est. value now</th>
             </tr>
           </thead>
           <tbody>
-            {% for r in rows %}
+            {% for m in members %}
             <tr>
-              <td>{{ r.member }}</td>
-              <td><span class="badge bg-{{ 'primary' if r.chamber == 'House' else 'dark' }}">{{ r.chamber }}</span></td>
-              <td class="fw-semibold">{{ r.ticker or '—' }}</td>
-              <td class="text-truncate" style="max-width:220px" title="{{ r.asset_description }}">{{ r.asset_description }}</td>
-              <td data-order="{{ r.tx_date }}">{{ r.tx_date }}</td>
-              <td>
-                {% if r.amount_min is not none %}${{ "{:,.0f}".format(r.amount_min) }} – ${{ "{:,.0f}".format(r.amount_max) }}{% else %}—{% endif %}
-              </td>
-              <td class="text-end">{% if r.purchase_price %}${{ "%.2f"|format(r.purchase_price) }}{% else %}—{% endif %}</td>
-              <td class="text-end">{% if r.current_price %}${{ "%.2f"|format(r.current_price) }}{% else %}—{% endif %}</td>
-              <td class="text-end {{ 'text-success' if (r.change_pct or 0) >= 0 else 'text-danger' }}" data-order="{{ r.change_pct if r.change_pct is not none else -9999 }}">
-                {% if r.change_pct is not none %}{{ "%+.1f"|format(r.change_pct) }}%{% else %}—{% endif %}
-              </td>
-              <td class="text-end" data-order="{{ r.value_now if r.value_now is not none else 0 }}">
-                {% if r.value_now is not none %}${{ "{:,.0f}".format(r.value_now) }}{% else %}—{% endif %}
-              </td>
-              <td class="text-center">
-                {% if r.ticker and r.purchase_price %}
-                <button class="btn btn-sm btn-outline-primary graph-btn"
-                        data-ticker="{{ r.ticker }}" data-start="{{ r.tx_date }}"
-                        data-member="{{ r.member }}">📈</button>
-                {% endif %}
+              <td><a href="{{ url_for('member_detail', member=m.member) }}" class="fw-semibold text-decoration-none">{{ m.member }}</a></td>
+              <td><span class="badge bg-{{ 'primary' if m.chamber == 'House' else 'dark' }}">{{ m.chamber }}</span></td>
+              <td class="text-end">{{ m.purchases }}</td>
+              <td class="text-end" data-order="{{ m.value_now or 0 }}">
+                {% if m.value_now %}${{ "{:,.0f}".format(m.value_now) }}{% else %}—{% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -101,27 +80,10 @@
     </div>
   </main>
 
-  <!-- Performance graph modal -->
-  <div class="modal fade" id="graphModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="graphTitle">Performance</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div id="graphStatus" class="text-muted small mb-2"></div>
-          <canvas id="perfChart" height="120"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
