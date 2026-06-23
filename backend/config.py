@@ -22,11 +22,11 @@ DB_PATH = os.environ.get(
 DATA_SOURCES = {
     "house": os.environ.get(
         "CT_HOUSE_URL",
-        "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json",
+        "https://raw.githubusercontent.com/TattooedHead/house-stock-watcher-data/main/data/all_transactions.json",
     ),
     "senate": os.environ.get(
         "CT_SENATE_URL",
-        "https://senate-stock-watcher-data.s3-us-west-2.amazonaws.com/aggregate/all_transactions.json",
+        "https://raw.githubusercontent.com/timothycarambat/senate-stock-watcher-data/master/aggregate/all_transactions.json",
     ),
 }
 

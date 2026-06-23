@@ -81,7 +81,7 @@ def _normalize(record, chamber):
         "state": record.get("state") or record.get("district") or "",
         "party": record.get("party") or "",
         "ticker": ticker,
-        "asset_description": (record.get("asset_description") or "").strip(),
+        "asset_description": (record.get("asset_description") or "").replace("\x00", "").strip(),
         "tx_type": tx_type,
         "tx_date": tx_date,
         "disclosure_date": _parse_date(record.get("disclosure_date")),
