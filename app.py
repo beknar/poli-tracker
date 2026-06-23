@@ -1,9 +1,11 @@
 """Flask web dashboard for congressional stock purchases.
 
-Run from the app/ directory:
+Run (dev):
     pip install -r requirements.txt
     python -m backend.ingest        # first-time data load (or use the Refresh button)
     flask --app app run             # http://127.0.0.1:5000
+
+For HTTPS / production (nginx + Let's Encrypt), see deploy/README.md.
 """
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 
@@ -15,11 +17,25 @@ app = Flask(__name__)
 
 @app.route("/")
 def dashboard():
+    """One row per member: name (link) | chamber | purchases | est. value."""
     db.init_db()
     with db.connect() as conn:
-        rows = db.fetch_dashboard_rows(conn)
+        members = db.fetch_members(conn)
         summary = db.summary(conn)
-    return render_template("dashboard.html", rows=rows, summary=summary)
+    return render_template("dashboard.html", members=members, summary=summary)
+
+
+@app.route("/member/<member>")
+def member_detail(member):
+    """A single member's purchases over the last 6 months, with per-row prices."""
+    db.init_db()
+    with db.connect() as conn:
+        rows, totals = db.fetch_member_rows(conn, member)
+        last_updated = db.get_meta(conn, "last_ingest", "never")
+    return render_template(
+        "member.html", member=member, rows=rows, totals=totals,
+        last_updated=last_updated,
+    )
 
 
 @app.route("/refresh", methods=["POST"])

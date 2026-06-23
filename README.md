@@ -17,11 +17,15 @@ now, and a one-click performance graph from the purchase date to the present.
   Senate, prices each holding (at purchase vs. now), and stores everything in
   **SQLite**. The first run builds the database; later runs **upsert** new
   purchases and refresh current prices.
-- **Dashboard (web):** a Bootstrap + DataTables table of every member's purchases
-  — name, chamber, ticker, asset, purchase date, disclosed amount, per-share price
-  at purchase, current per-share price, % change, and estimated current value.
+- **Dashboard (web):** a Bootstrap + DataTables list with **one row per member** —
+  `Member (link) | Chamber | Purchases | Est. value now`.
+- **Member detail page:** clicking a member opens their last-6-months purchases —
+  total cash disclosed, original $/share, current $/share, % change, estimated
+  value now, and a link to a performance chart per holding.
 - **Performance graphs:** each priced holding has a **📈 graph** (Chart.js) of the
   stock from the purchase date to today.
+- **HTTPS:** production deploy behind nginx + Let's Encrypt — see
+  [`deploy/README.md`](deploy/README.md).
 
 ## Data sources (free, no API key)
 

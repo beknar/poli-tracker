@@ -183,3 +183,33 @@ def summary(conn):
         "value_at_purchase": val_buy,
         "last_updated": get_meta(conn, "last_ingest", "never"),
     }
+
+
+def fetch_members(conn):
+    """One aggregated row per member: chamber, purchase count, and est. values."""
+    agg = {}
+    for r in fetch_dashboard_rows(conn):
+        m = r["member"] or "Unknown"
+        a = agg.setdefault(m, {
+            "member": m, "chamber": r["chamber"], "state": r["state"],
+            "purchases": 0, "value_now": 0.0, "value_at_purchase": 0.0,
+        })
+        a["purchases"] += 1
+        if r["value_now"]:
+            a["value_now"] += r["value_now"]
+        if r["value_at_purchase"]:
+            a["value_at_purchase"] += r["value_at_purchase"]
+    return sorted(agg.values(), key=lambda x: x["value_now"], reverse=True)
+
+
+def fetch_member_rows(conn, member):
+    """All of one member's purchase rows (newest first) + per-member totals."""
+    rows = [r for r in fetch_dashboard_rows(conn) if (r["member"] or "") == member]
+    totals = {
+        "purchases": len(rows),
+        "chamber": rows[0]["chamber"] if rows else "",
+        "state": rows[0]["state"] if rows else "",
+        "disclosed": sum(r["value_at_purchase"] for r in rows if r["value_at_purchase"]),
+        "value_now": sum(r["value_now"] for r in rows if r["value_now"]),
+    }
+    return rows, totals
