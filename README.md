@@ -24,7 +24,7 @@ now, and a one-click performance graph from the purchase date to the present.
   value now, and a link to a performance chart per holding.
 - **Performance graphs:** each priced holding has a **📈 graph** (Chart.js) of the
   stock from the purchase date to today.
-- **HTTPS:** production deploy behind nginx + Let's Encrypt — see
+- **HTTPS:** serve behind nginx with a self-signed certificate — see
   [`deploy/README.md`](deploy/README.md).
 
 ## Data sources (free, no API key)
